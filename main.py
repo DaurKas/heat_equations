@@ -12,6 +12,7 @@ import numpy as np
 from scipy.integrate import odeint
 
 import LinearTEQ as lineq
+import runge_method
 
 def count(ax1, t, x0, xn, h, tau):
     
@@ -19,6 +20,7 @@ def count(ax1, t, x0, xn, h, tau):
     (gridX, gridT, gridF) = linHeatEq.initGrid()
     u = linHeatEq.linSolution2(gridX, gridT, gridF)
     u2 = linHeatEq.fourPointDiffScheme(gridX, gridT, gridF)
+    #u = runge_method.rungeMethod(linHeatEq, gridX, gridT, gridF)
     plt1 = ax1.plot(gridX, u[t], 'r', label='u(x, t)')
     plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
     ax1.legend()
