@@ -23,21 +23,29 @@ def count(ax1, t, x0, xn, h, tau):
     plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
     ax1.legend()
     ax1.grid()
-    ax1.set_xlim(0, 3.14)
+    ax1.minorticks_on()
+    ax1.grid(which='minor', 
+        color = 'k', 
+        linestyle = ':')
+    ax1.set_xlim(x0, xn)
     ax1.set_ylim(0, 2)
     ax1.set(xlabel='x', ylabel='y', title="1")  
     
     return (gridX, u, u2, plt1)
 
-def drawPlt(ax1, t, gridX, u, u2, plt1):
+def drawPlt(ax1, t, gridX, u, u2, plt1, x0, xn):
 
     ax1.clear()
     ax1.plot(gridX, u[t], 'r', label='u(x)')
     ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
     ax1.grid()
+    ax1.minorticks_on()
     ax1.legend()
-    ax1.set_xlim(0, 3.14)
-    ax1.set_ylim(0, 2)    
+    ax1.grid(which='minor', 
+        color = 'k', 
+        linestyle = ':')
+    ax1.set_xlim(x0, xn)
+    ax1.set_ylim(0, 2 )   
     ax1.set(xlabel='x', ylabel='y', title="1")
     return
 
@@ -48,7 +56,7 @@ class Window(QMainWindow):
             t_string = str(self.t)
             self.label4.setText("t: " + t_string)
             try:
-                drawPlt(self.ax1, value, self.gridX, self.u, self.u2, self.plt1)
+                drawPlt(self.ax1, value, self.gridX, self.u, self.u2, self.plt1, self.x0, self.xn)
             except Exception as e:
                 self.label_error.setText(str(e))
             #self.ax1.clear()
@@ -66,11 +74,12 @@ class Window(QMainWindow):
         self.figure = plt.figure()
         self.canvas = FigureCanvas(self.figure)
 
-        self.ax1 = self.figure.add_subplot(121)
+        self.ax1 = self.figure.add_subplot(111)
+
         self.ax1.set_xlim(0, 5)
         self.ax1.set_ylim(-5, 5)
         self.plot_widget = QWidget(self)
-        self.plot_widget.setGeometry(0, 0, 1200, 600)
+        self.plot_widget.setGeometry(0, 0, 800, 600)
         plot_box = QVBoxLayout()
         plot_box.addWidget(self.canvas)
         self.plot_widget.setLayout(plot_box)
@@ -166,8 +175,10 @@ class Window(QMainWindow):
         except Exception as e:
             self.label_error.setText(str(e))
         
-        plt.tight_layout()
-        plt.gcf().subplots_adjust(bottom=0.12, top=0.9, wspace=0.25)
+        #plt.tight_layout()
+        #plt.gcf().subplots_adjust(right=0.9, left=0.1, bottom=0.12, top=0.9)
+        plt.gcf().subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.90, hspace=0.13)
+
         self.canvas.draw()
 
 
