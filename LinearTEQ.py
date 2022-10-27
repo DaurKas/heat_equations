@@ -43,7 +43,7 @@ class linearEquation:
         return 1
 
     def f(self, x, t):
-        return np.cos(t * x)
+        return np.sin(t * x)
 
     def initGrid(self):
 
@@ -94,6 +94,7 @@ class linearEquation:
         y = leftMatrix[0][0]
         a[0] = -leftMatrix[0][1] / y
         b[0] = rightArr[0] / y
+
         for i in range(1, N - 1): 
             y = leftMatrix[i][i] + leftMatrix[i][i - 1] * a[i - 1]
             a[i] = -leftMatrix[i][i + 1] / y
@@ -146,8 +147,8 @@ class linearEquation:
             rightArr[i] = ans[0][i]
 
         for j in range(1, M):
-            for i in range(N):
-                rightArr[i] = rightArr[i] - tau * gridF[j][i] * 0
+            #for i in range(N):
+                #rightArr[i] = rightArr[i] - tau * gridF[j][i] * 1
 
             newLayer = self.sweepMethod(coeffMatrix, rightArr, N)
 

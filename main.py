@@ -1,7 +1,7 @@
 from cmath import sin
 from turtle import right
 from unittest import result
-from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QLabel, QLineEdit, QRadioButton, QVBoxLayout, QFrame, QPushButton, QSlider
+from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QLabel, QLineEdit, QRadioButton, QVBoxLayout, QFrame, QPushButton, QSlider, QCheckBox, QComboBox
 
 from PyQt5 import QtCore, QtWidgets, QtGui, QtMultimedia
 import matplotlib.pyplot as plt
@@ -14,12 +14,14 @@ from scipy.integrate import odeint
 import LinearTEQ as lineq
 import runge_method
 
-def count(ax1, t, x0, xn, h, tau):
+def count(ax1, t, x0, xn, h, tau, qsl):
     
     linHeatEq = lineq.linearEquation(x0, xn, h, tau)
     (gridX, gridT, gridF) = linHeatEq.initGrid()
     u = linHeatEq.linSolution2(gridX, gridT, gridF)
     u2 = linHeatEq.fourPointDiffScheme(gridX, gridT, gridF)
+    qsl.setMaximum(int(1 / tau))
+
     #u = runge_method.rungeMethod(linHeatEq, gridX, gridT, gridF)
     plt1 = ax1.plot(gridX, u[t], 'r', label='u(x, t)')
     plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
@@ -57,6 +59,7 @@ class Window(QMainWindow):
             self.t = value
             t_string = str(self.t)
             self.label4.setText("t: " + t_string)
+
             try:
                 drawPlt(self.ax1, value, self.gridX, self.u, self.u2, self.plt1, self.x0, self.xn)
             except Exception as e:
@@ -105,7 +108,7 @@ class Window(QMainWindow):
         self.label2.setGeometry(210, 650, 60, 20)
         self.lineEdit3 = QLineEdit(self)
         self.lineEdit3.setGeometry(230, 650, 50, 20)
-        self.lineEdit3.setText("0.01")                
+        self.lineEdit3.setText("0.1")                
         self.h = float(self.lineEdit3.text())
 
         
@@ -113,7 +116,7 @@ class Window(QMainWindow):
         self.label3.setGeometry(290, 650, 50, 20)
         self.lineEdit4 = QLineEdit(self)
         self.lineEdit4.setGeometry(310, 650, 50, 20)
-        self.lineEdit4.setText("0.00005")
+        self.lineEdit4.setText("0.05")
         self.tau = float(self.lineEdit4.text())
 
 
@@ -124,18 +127,47 @@ class Window(QMainWindow):
         self.qsl = QSlider(QtCore.Qt.Horizontal, self)
         self.qsl.setGeometry(420, 650, 200, 20)
         self.qsl.valueChanged[int].connect(self.changeValue)
-        self.qsl.setMaximum(20000)
+        self.qsl.setMaximum(int(1 / self.tau))
 
-        self.condLabel = QLabel("U_t = K * U_xx + f(x, t)\n U(x, 0) = sin(x)\n U(x_0, t) = 0\n U(x_n, t) = 0")
-        self.condLabel.setGeometry(700, 650, 100, 100)
-               
+        self.condLabel = QLabel("U_t = K * U_xx + f(x, t)\n U(x, 0) = sin(x)\n U(x_0, t) = 0\n U(x_n, t) = 0", self)
+        self.condLabel.setGeometry(820, 400, 100, 100)
+
+        self.equationTypeSelect = QComboBox(self)
+        self.equationTypeSelect.setGeometry(820, 100, 140, 20)
+        self.equationTypeSelect.addItem("Линейная задача")
+        self.equationTypeSelect.addItem("Нелинейная задача")
+
+        self.explicitLabel = QLabel("Явная схема", self)
+        self.explicitLabel.setGeometry(820, 200, 100, 20)
+        self.explicitCheck = QCheckBox(self)
+        self.explicitCheck.setGeometry(900, 200, 20, 20)
+        self.explicitCheck.setChecked(1)
+        self.explicitCheck.stateChanged.connect(self.showExplicit)
+
+        self.implicitLabel = QLabel("Неявная схема", self)
+        self.implicitLabel.setGeometry(940, 200, 100, 20)
+        self.implicitCheck = QCheckBox(self)
+        self.implicitCheck.setGeometry(1020, 200, 20, 20)
+        self.implicitCheck.setChecked(1)
+        self.implicitCheck.stateChanged.connect(self.showImplicit)
+
+        self.precisionControlLabel = QLabel("Считать с правилом Рунге", self)
+        self.precisionControlLabel.setGeometry(820, 300, 200, 20)
+        self.precisionControlCheck = QCheckBox(self)
+        self.precisionControlCheck.setGeometry(980, 300, 20, 20)
+
+
+
+
+
+                       
         self.label_error = QLabel("", self)
         self.label_error.setGeometry(370, 200, 400, 30)
         
         self.button = QPushButton('Расчет', self)
         self.button.setGeometry(800, 650, 200, 40)
         self.button.clicked.connect(self.plot)
-        self.plot()
+        #self.plot()
         self.show()
         
         
@@ -148,32 +180,9 @@ class Window(QMainWindow):
         self.h = float(self.lineEdit3.text())
         self.tau = float(self.lineEdit4.text())
 
-        if len(self.lineEdita1.text())!=0:
-            self.a=float(self.lineEdita1.text())
-        else:
-            self.a = -0.02
-            self.lineEdita1.setText("-0.02")
-            
-        if len(self.lineEditb1.text()) != 0:
-            self.b=float(self.lineEditb1.text())
-        else:
-            self.b = 0.25
-            self.lineEditb1.setText("0.25")
-            
-        if len(self.lineEdit3.text()) != 0:
-            self.c=float(self.lineEdit3.text())
-        else:
-            self.c = 1.25
-            self.lineEdit3.setText("1.25")
-            
-        if len(self.lineEdit4.text()) != 0:  
-            self.dt=float(self.lineEdit4.text())
-        else:
-            self.dt = 0.01
-            self.lineEdit4.setText("0.01")
                 
         try:
-            (self.gridX, self.u, self.u2, self.plt1) = count(self.ax1, 1, self.x0, self.xn, self.h, self.tau)
+            (self.gridX, self.u, self.u2, self.plt1) = count(self.ax1, 1, self.x0, self.xn, self.h, self.tau, self.qsl)
         except Exception as e:
             self.label_error.setText(str(e))
         
@@ -182,6 +191,13 @@ class Window(QMainWindow):
         plt.gcf().subplots_adjust(left=0.1, right=0.9, bottom=0.1, top=0.90, hspace=0.13)
 
         self.canvas.draw()
+    
+    def showExplicit(self, int):
+        a = 5
+
+
+    def showImplicit(self, int):
+        b = 5
 
 
 
