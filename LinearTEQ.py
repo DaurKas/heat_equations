@@ -34,12 +34,12 @@ class linearEquation:
         return np.sin (x)
 
     def u(self, xi, tj):
+        if (tj == 0):
+            return self.u0(xi, tj)
         if (xi == self.x0):
             return self.v0(xi, tj)
         if (xi == self.xn):
             return self.vn(xi, tj)
-        if (tj == 0):
-            return self.u0(xi, tj)
         return 1
 
     def f(self, x, t):
@@ -56,11 +56,15 @@ class linearEquation:
         gridX = np.zeros(N + 1)
         gridT = np.zeros(M + 1)
         gridY = np.zeros((M + 1, N + 1))
+        for i in range(N + 1):
+            gridX[i] = ((XN - X0) / N) * i
+
         for j in range(M + 1):
             gridT[j] = tau * j
             for i in range(N + 1):
-                gridX[i] = ((XN - X0) / N) * i
-                gridY[j][i] = self.u(gridX[i], gridT[j])
+                gridY[j][i] = self.f(gridX[i], gridT[j])
+        #print(N)
+        #print(gridT, gridX, gridY)
         return (gridX, gridT, gridY)
 
     def fourPointDiffScheme(self, gridX, gridT, gridF):
@@ -77,13 +81,17 @@ class linearEquation:
         coeff = ((K * tau) / (h * h))
         diffC = ((h * h) - 2 * (K * tau)) / (h * h)
         print("KF: ", diffC, coeff)
-        for i in range(N):
+        for i in range(N + 1):
             ans[0][i] = self.u(gridX[i], 0)
+        for i in range(M + 1):
+            ans[i][0] = self.u(X0, gridT[i])
+            ans[i][N] = self.u(XN, gridT[i])
         
-        for j in range(M - 1):
-            for i in range(N - 1):
-                ans[j + 1][i] = (coeff * ans[j][i + 1]) + diffC * ans[j][i] + coeff * ans[j][i - 1] + tau * h * h * gridF[j][i]
+        for j in range(M):
+            for i in range(1, N):
+                ans[j + 1][i] = (coeff * ans[j][i + 1]) + diffC * ans[j][i] + coeff * ans[j][i - 1] + tau * gridF[j][i]
 
+        print (ans)
                 
         return ans
 

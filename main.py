@@ -32,16 +32,18 @@ def count(ax1, t, x0, xn, h, tau, qsl):
         color = 'k', 
         linestyle = ':')
     ax1.set_xlim(x0, xn)
-    ax1.set_ylim(0, 2)
+    ax1.set_ylim(0, 5)
     ax1.set(xlabel='x', ylabel='y', title="1")  
     
-    return (gridX, u, u2, plt1)
+    return (gridX, u, u2, plt1, plt2)
 
-def drawPlt(ax1, t, gridX, u, u2, plt1, x0, xn):
+def drawPlt(ax1, t, gridX, u, u2, plt1, plt2, x0, xn, isExpl, isImpl):
 
     ax1.clear()
-    ax1.plot(gridX, u[t], 'r', label='u(x)')
-    ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
+    if (isImpl):
+        plt1 = ax1.plot(gridX, u[t], 'r', label='u(x)')
+    if (isExpl):
+        plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
     ax1.grid()
     ax1.minorticks_on()
     ax1.legend()
@@ -49,9 +51,9 @@ def drawPlt(ax1, t, gridX, u, u2, plt1, x0, xn):
         color = 'k', 
         linestyle = ':')
     ax1.set_xlim(x0, xn)
-    ax1.set_ylim(0, 2 )   
+    ax1.set_ylim(0, 5)   
     ax1.set(xlabel='x', ylabel='y', title="1")
-    return
+    return (plt1, plt2)
 
 class Window(QMainWindow):
     def changeValue(self, value):
@@ -61,7 +63,7 @@ class Window(QMainWindow):
             self.label4.setText("t: " + t_string)
 
             try:
-                drawPlt(self.ax1, value, self.gridX, self.u, self.u2, self.plt1, self.x0, self.xn)
+                (self.plt1, self.plt2) = drawPlt(self.ax1, value, self.gridX, self.u, self.u2, self.plt1, self.plt2, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
             except Exception as e:
                 self.label_error.setText(str(e))
             #self.ax1.clear()
@@ -116,7 +118,7 @@ class Window(QMainWindow):
         self.label3.setGeometry(290, 650, 50, 20)
         self.lineEdit4 = QLineEdit(self)
         self.lineEdit4.setGeometry(310, 650, 50, 20)
-        self.lineEdit4.setText("0.05")
+        self.lineEdit4.setText("0.005")
         self.tau = float(self.lineEdit4.text())
 
 
@@ -142,6 +144,7 @@ class Window(QMainWindow):
         self.explicitCheck = QCheckBox(self)
         self.explicitCheck.setGeometry(900, 200, 20, 20)
         self.explicitCheck.setChecked(1)
+        self.isShowExplicit = 1
         self.explicitCheck.stateChanged.connect(self.showExplicit)
 
         self.implicitLabel = QLabel("Неявная схема", self)
@@ -149,6 +152,7 @@ class Window(QMainWindow):
         self.implicitCheck = QCheckBox(self)
         self.implicitCheck.setGeometry(1020, 200, 20, 20)
         self.implicitCheck.setChecked(1)
+        self.isShowImplicit = 1
         self.implicitCheck.stateChanged.connect(self.showImplicit)
 
         self.precisionControlLabel = QLabel("Считать с правилом Рунге", self)
@@ -182,7 +186,7 @@ class Window(QMainWindow):
 
                 
         try:
-            (self.gridX, self.u, self.u2, self.plt1) = count(self.ax1, 1, self.x0, self.xn, self.h, self.tau, self.qsl)
+            (self.gridX, self.u, self.u2, self.plt1, self.plt2) = count(self.ax1, 1, self.x0, self.xn, self.h, self.tau, self.qsl)
         except Exception as e:
             self.label_error.setText(str(e))
         
@@ -193,11 +197,24 @@ class Window(QMainWindow):
         self.canvas.draw()
     
     def showExplicit(self, int):
-        a = 5
+        if (self.isShowExplicit):
+            self.isShowExplicit = 0
+        else:
+            self.isShowExplicit = 1
+        (self.plt1, self.plt2) = drawPlt(self.ax1, self.t, self.gridX, self.u, self.u2, self.plt1, self.plt2, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
+        self.canvas.draw()
+
+
+
 
 
     def showImplicit(self, int):
-        b = 5
+        if (self.isShowImplicit):
+            self.isShowImplicit = 0
+        else:
+            self.isShowImplicit = 1
+        (self.plt1, self.plt2) = drawPlt(self.ax1, self.t, self.gridX, self.u, self.u2, self.plt1, self.plt2, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
+        self.canvas.draw()
 
 
 
