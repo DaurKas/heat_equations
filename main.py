@@ -14,48 +14,66 @@ from scipy.integrate import odeint
 import LinearTEQ as lineq
 import runge_method
 
-def count(ax1, t, x0, xn, h, tau, qsl):
-    
-    linHeatEq = lineq.linearEquation(x0, xn, h, tau)
-    (gridX, gridT, gridF) = linHeatEq.initGrid()
-    u = linHeatEq.linSolution2(gridX, gridT, gridF)
-    u2 = linHeatEq.fourPointDiffScheme(gridX, gridT, gridF)
-    qsl.setMaximum(int(1 / tau))
 
-    #u = runge_method.rungeMethod(linHeatEq, gridX, gridT, gridF)
-    plt1 = ax1.plot(gridX, u[t], 'r', label='u(x, t)')
-    plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
-    ax1.legend()
-    ax1.grid()
-    ax1.minorticks_on()
-    ax1.grid(which='minor', 
-        color = 'k', 
-        linestyle = ':')
-    ax1.set_xlim(x0, xn)
-    ax1.set_ylim(0, 5)
-    ax1.set(xlabel='x', ylabel='y', title="1")  
-    
-    return (gridX, u, u2, plt1, plt2)
 
-def drawPlt(ax1, t, gridX, u, u2, plt1, plt2, x0, xn, isExpl, isImpl):
 
-    ax1.clear()
-    if (isImpl):
-        plt1 = ax1.plot(gridX, u[t], 'r', label='u(x)')
-    if (isExpl):
-        plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
-    ax1.grid()
-    ax1.minorticks_on()
-    ax1.legend()
-    ax1.grid(which='minor', 
-        color = 'k', 
-        linestyle = ':')
-    ax1.set_xlim(x0, xn)
-    ax1.set_ylim(0, 5)   
-    ax1.set(xlabel='x', ylabel='y', title="1")
-    return (plt1, plt2)
 
 class Window(QMainWindow):
+    def count(self, ax1, t, x0, xn, h, tau, qsl, isRungeRule):
+    
+        linHeatEq = lineq.linearEquation(x0, xn, h, tau)
+        (gridX, gridT, gridF) = linHeatEq.initGrid()
+
+        
+        u2 = linHeatEq.fourPointDiffScheme(gridX, gridT, gridF)
+        qsl.setMaximum(int(1 / tau))
+        if (isRungeRule):
+            new_linHeatEq = lineq.linearEquation(x0, xn, h, 0.1)
+            (new_gridX, new_gridT, new_gridF) = new_linHeatEq.initGrid()
+            (u, self.numOfIter, self.resultRungeTau) = runge_method.rungeMethod(new_linHeatEq, new_gridX, new_gridT, new_gridF, self.eps, 1)
+            self.precisionControlSteps.setText(f"Количество шагов: {self.numOfIter}")
+            self.precisionControlResultTau.setText(f"Итоговое tau: {self.resultRungeTau}")
+            self.gridX = gridX
+            self.u = u
+            self.explicitCheck.setChecked(False)
+            qsl.setMaximum(int(1 / self.resultRungeTau))
+            print("HELLO THERE")
+        else:
+            u = linHeatEq.linSolution2(gridX, gridT, gridF)
+            self.plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
+
+
+        self.plt1 = ax1.plot(gridX, u[t], 'r', label='u(x, t)')
+        ax1.legend()
+        ax1.grid()
+        ax1.minorticks_on()
+        ax1.grid(which='minor', 
+            color = 'k', 
+            linestyle = ':')
+        ax1.set_xlim(x0, xn)
+        ax1.set_ylim(0, 5)
+        ax1.set(xlabel='x', ylabel='y', title="1")  
+        
+        return (gridX, u, u2)
+
+    def drawPlt(self, ax1, t, gridX, x0, xn, isExpl, isImpl):
+
+        ax1.clear()
+        if (isImpl):
+            self.plt1 = ax1.plot(gridX, self.u[t], 'r', label='u(x)')
+        if (isExpl):
+            self.plt2 = ax1.plot(gridX, self.u2[t], 'g', label='u(x, t)')
+        ax1.grid()
+        ax1.minorticks_on()
+        ax1.legend()
+        ax1.grid(which='minor', 
+            color = 'k', 
+            linestyle = ':')
+        ax1.set_xlim(x0, xn)
+        ax1.set_ylim(0, 5)   
+        ax1.set(xlabel='x', ylabel='y', title="1")
+        return
+
     def changeValue(self, value):
             print(value)
             self.t = value
@@ -63,7 +81,7 @@ class Window(QMainWindow):
             self.label4.setText("t: " + t_string)
 
             try:
-                (self.plt1, self.plt2) = drawPlt(self.ax1, value, self.gridX, self.u, self.u2, self.plt1, self.plt2, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
+                self.drawPlt(self.ax1, value, self.gridX, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
             except Exception as e:
                 self.label_error.setText(str(e))
             #self.ax1.clear()
@@ -155,10 +173,28 @@ class Window(QMainWindow):
         self.isShowImplicit = 1
         self.implicitCheck.stateChanged.connect(self.showImplicit)
 
-        self.precisionControlLabel = QLabel("Считать с правилом Рунге", self)
-        self.precisionControlLabel.setGeometry(820, 300, 200, 20)
+        self.precisionControlLabel = QLabel("Авто-поиск tau", self)
+        self.precisionControlLabel.setGeometry(820, 300, 100, 20)
         self.precisionControlCheck = QCheckBox(self)
-        self.precisionControlCheck.setGeometry(980, 300, 20, 20)
+        self.precisionControlCheck.setGeometry(920, 300, 20, 20)
+        self.isRungeRule = False
+        self.precisionControlCheck.stateChanged.connect(self.useRungeRule)
+
+        self.epsLabel = QLabel("eps =", self)
+        self.epsLabel.setGeometry(960, 300, 50, 20)
+
+        self.epsLineEdit = QLineEdit(self)
+        self.epsLineEdit.setGeometry(1000, 300, 100, 20)
+        self.epsLineEdit.setText("0.01")
+        self.eps = float(self.epsLineEdit.text())
+
+
+        self.precisionControlSteps = QLabel("Количество шагов:", self)
+        self.precisionControlSteps.setGeometry(820, 320, 200, 20)
+        self.precisionControlResultTau = QLabel("Итоговое tau:", self)
+        self.precisionControlResultTau.setGeometry(820, 340, 200, 20)
+
+
 
 
 
@@ -183,10 +219,11 @@ class Window(QMainWindow):
         self.xn = float(self.lineEditb1.text())
         self.h = float(self.lineEdit3.text())
         self.tau = float(self.lineEdit4.text())
+        self.eps = float(self.epsLineEdit.text())
 
                 
         try:
-            (self.gridX, self.u, self.u2, self.plt1, self.plt2) = count(self.ax1, 1, self.x0, self.xn, self.h, self.tau, self.qsl)
+            (self.gridX, self.u, self.u2) = self.count(self.ax1, 1, self.x0, self.xn, self.h, self.tau, self.qsl, self.isRungeRule)
         except Exception as e:
             self.label_error.setText(str(e))
         
@@ -201,20 +238,19 @@ class Window(QMainWindow):
             self.isShowExplicit = 0
         else:
             self.isShowExplicit = 1
-        (self.plt1, self.plt2) = drawPlt(self.ax1, self.t, self.gridX, self.u, self.u2, self.plt1, self.plt2, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
+        self.drawPlt(self.ax1, self.t, self.gridX, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
         self.canvas.draw()
-
-
-
-
 
     def showImplicit(self, int):
         if (self.isShowImplicit):
             self.isShowImplicit = 0
         else:
             self.isShowImplicit = 1
-        (self.plt1, self.plt2) = drawPlt(self.ax1, self.t, self.gridX, self.u, self.u2, self.plt1, self.plt2, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
+        self.drawPlt(self.ax1, self.t, self.gridX, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
         self.canvas.draw()
+    def useRungeRule(self, int):
+        self.isRungeRule = not(self.isRungeRule)
+
 
 
 
