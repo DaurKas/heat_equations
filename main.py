@@ -21,14 +21,24 @@ import runge_method
 class Window(QMainWindow):
     def count(self, ax1, t, x0, xn, h, tau, qsl, isRungeRule):
     
-        linHeatEq = lineq.linearEquation(x0, xn, h, tau)
+        linHeatEq = lineq.linearEquation(x0, xn, h, tau, self.kIsDiff,
+                                        self.u0LineEdit.text(),
+                                        self.unLineEdit.text(),
+                                        self.v0LineEdit.text(),
+                                        self.kLineEdit.text(),
+                                        self.fLineEdit.text() )
         (gridX, gridT, gridF) = linHeatEq.initGrid()
 
         
         u2 = linHeatEq.fourPointDiffScheme(gridX, gridT, gridF)
         qsl.setMaximum(int(1 / tau))
         if (isRungeRule):
-            new_linHeatEq = lineq.linearEquation(x0, xn, h, 0.1)
+            new_linHeatEq = lineq.linearEquation(x0, xn, h, 0.1, self.kIsDiff,
+                                        self.u0LineEdit.text(),
+                                        self.unLineEdit.text(),
+                                        self.v0LineEdit.text(),
+                                        self.kLineEdit.text(),
+                                        self.fLineEdit.text() )
             (new_gridX, new_gridT, new_gridF) = new_linHeatEq.initGrid()
             (u, self.numOfIter, self.resultRungeTau) = runge_method.rungeMethod(new_linHeatEq, new_gridX, new_gridT, new_gridF, self.eps, 1)
             self.precisionControlSteps.setText(f"Количество шагов: {self.numOfIter}")
@@ -149,9 +159,6 @@ class Window(QMainWindow):
         self.qsl.valueChanged[int].connect(self.changeValue)
         self.qsl.setMaximum(int(1 / self.tau))
 
-        self.condLabel = QLabel("U_t = K * U_xx + f(x, t)\n U(x, 0) = sin(x)\n U(x_0, t) = 0\n U(x_n, t) = 0", self)
-        self.condLabel.setGeometry(820, 400, 100, 100)
-
         self.equationTypeSelect = QComboBox(self)
         self.equationTypeSelect.setGeometry(820, 100, 140, 20)
         self.equationTypeSelect.addItem("Линейная задача")
@@ -188,12 +195,49 @@ class Window(QMainWindow):
         self.epsLineEdit.setText("0.01")
         self.eps = float(self.epsLineEdit.text())
 
-
         self.precisionControlSteps = QLabel("Количество шагов:", self)
         self.precisionControlSteps.setGeometry(820, 320, 200, 20)
         self.precisionControlResultTau = QLabel("Итоговое tau:", self)
         self.precisionControlResultTau.setGeometry(820, 340, 200, 20)
 
+        self.klabel = QLabel("K(x, t) = ", self)
+        self.kLineEdit = QLineEdit(self)
+        self.klabel.setGeometry(820, 380, 60, 20)
+        self.kLineEdit.setGeometry(890, 380, 100, 20)
+        self.kLineEdit.setText("1")
+        self.kTypeLabel = QLabel("К переменный", self)
+        self.kTypeCheck = QCheckBox(self)
+        self.kTypeLabel.setGeometry(1020, 380, 100, 20)
+        self.kTypeCheck.setGeometry(1100, 380, 20, 20)
+        self.kIsDiff = False
+        self.kTypeCheck.stateChanged.connect(self.changeKType)
+
+
+        self.u0Label = QLabel("U(x0, t) = ", self)
+        self.u0LineEdit = QLineEdit(self)
+        self.u0Label.setGeometry(820, 400, 60, 20)
+        self.u0LineEdit.setGeometry(890, 400, 100, 20)
+        self.u0LineEdit.setText("0")
+
+
+        self.unLabel = QLabel("U(xn, t) = ", self)
+        self.unLineEdit = QLineEdit(self)
+        self.unLabel.setGeometry(820, 420, 60, 20)
+        self.unLineEdit.setGeometry(890, 420, 100, 20)
+        self.unLineEdit.setText("0")
+
+
+        self.v0Label = QLabel("U(x, 0) = ", self)
+        self.v0LineEdit = QLineEdit(self)
+        self.v0Label.setGeometry(820, 440, 60, 20)
+        self.v0LineEdit.setGeometry(890, 440, 100, 20)
+        self.v0LineEdit.setText("np.sin(x)")
+
+        self.fLabel = QLabel("f(x, t) = ", self)
+        self.fLineEdit = QLineEdit(self)
+        self.fLabel.setGeometry(820, 460, 60, 20)
+        self.fLineEdit.setGeometry(890, 460, 100, 20)
+        self.fLineEdit.setText("np.sin(x * t)")
 
 
 
@@ -250,6 +294,8 @@ class Window(QMainWindow):
         self.canvas.draw()
     def useRungeRule(self, int):
         self.isRungeRule = not(self.isRungeRule)
+    def changeKType(self, int):
+        self.kIsDiff = not(self.kIsDiff)
 
 
 

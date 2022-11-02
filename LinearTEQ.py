@@ -2,8 +2,9 @@ from cmath import sin
 from turtle import right
 
 import sys
-import math
+import math 
 import numpy as np 
+from numpy import sin, cos, tan, cosh, tanh, sinh
 from scipy.integrate import odeint
 
 class linearEquation:
@@ -15,23 +16,37 @@ class linearEquation:
     tau = 0.00005
     n = 100
     m = 20000
+    v0formula = "0"
+    vnformula = "0"
+    u0formula = "np.sin(x)" 
+    kformula = "1"
+    fformula = "np.sin(x*t)"
 
-    def __init__(self, _x0, _xn, _h, _tau):
+    def __init__(self, _x0, _xn, _h, _tau, isKDiff, v0f, vnf, u0f, kf, ff):
         self.x0 = _x0
         self.xn = _xn
         self.h = _h
         self.tau = _tau
         self.n = int((_xn - _x0) / _h)
         self.m = int(1 / _tau)
+        self.v0formula = v0f
+        self.vnformula = vnf
+        self.u0formula = u0f
+        self.kformula = kf
+        self.fformula = ff
+        self.kIsDiff = isKDiff 
+        #self.kvalues = np.zeros((self.m, self.n)) 
 
     def v0(self, x, t):
-        return 0
+        return eval(self.v0formula, {"np": np, "math": math, "x": x, "t": t})
 
     def vn(self, x, t):
-        return 0
+        return eval(self.vnformula, {"np": np, "math": math, "x": x, "t": t})
 
     def u0(self, x, t):
-        return np.sin (x)
+        #return np.sin(x)
+        return eval(self.u0formula, {"np": np, "math": math, "x": x, "t": t})
+
 
     def u(self, xi, tj):
         if (tj == 0):
@@ -43,7 +58,10 @@ class linearEquation:
         return 1
 
     def f(self, x, t):
-        return np.sin(t * x)
+        return eval(self.fformula, {"np": np, "math": math, "x": x, "t": t})
+    
+    def k(self, x, t):
+        return eval(self.kformula, {"np": np, "math": math, "x": x, "t": t})
 
     def initGrid(self):
 
@@ -56,6 +74,8 @@ class linearEquation:
         gridX = np.zeros(N + 1)
         gridT = np.zeros(M + 1)
         gridY = np.zeros((M + 1, N + 1))
+        kVal = np.zeros((M + 1, N + 1))
+
         for i in range(N + 1):
             gridX[i] = ((XN - X0) / N) * i
 
@@ -63,8 +83,11 @@ class linearEquation:
             gridT[j] = tau * j
             for i in range(N + 1):
                 gridY[j][i] = self.f(gridX[i], gridT[j])
+                kVal[j][i] = (self.k(gridX[i], gridT[j]))
         #print(N)
         #print(gridT, gridX, gridY)
+        self.kValues = kVal
+        print(self.kValues)
         return (gridX, gridT, gridY)
 
     def fourPointDiffScheme(self, gridX, gridT, gridF):
@@ -74,13 +97,13 @@ class linearEquation:
         h = self.h
         X0 = self.x0
         XN = self.xn
-        K = 1
 
         ans = np.zeros((M + 1, N + 1))
         print(M, N)
-        coeff = ((K * tau) / (h * h))
-        diffC = ((h * h) - 2 * (K * tau)) / (h * h)
-        print("KF: ", diffC, coeff)
+        if (not self.kIsDiff):
+            coeff = ((self.k(0, 0) * tau) / (h * h))
+            diffC = ((h * h) - 2 * (self.k(0, 0) * tau)) / (h * h)
+            print("KF: ", diffC, coeff)
         for i in range(N + 1):
             ans[0][i] = self.u(gridX[i], 0)
         for i in range(M + 1):
@@ -89,9 +112,17 @@ class linearEquation:
         
         for j in range(M):
             for i in range(1, N):
-                ans[j + 1][i] = (coeff * ans[j][i + 1]) + diffC * ans[j][i] + coeff * ans[j][i - 1] + tau * gridF[j][i]
+                if (self.kIsDiff):
+                    kright = (self.kValues[j][i] + self.kValues[j][i + 1]) / 2
+                    kleft = (self.kValues[j][i] + self.kValues[j][i - 1]) / 2
+                    diffRight = ans[j][i + 1] - ans[j][i]
+                    diffLeft = ans[j][i] - ans[j][i - 1]
+                    #print(diffRight, diffLeft)
+                    ans[j + 1][i] = tau * (((kright * diffRight) - (kleft * diffLeft)) / (h * h)  + gridF[j][i]) + ans[j][i]
+                else:
+                    ans[j + 1][i] = (coeff * ans[j][i + 1]) + diffC * ans[j][i] + coeff * ans[j][i - 1] + tau * gridF[j][i]
 
-        print (ans)
+        #print (ans)
                 
         return ans
 
@@ -122,10 +153,16 @@ class linearEquation:
         h = self.h
         X0 = self.x0
         XN = self.xn
-        K = 1
-
-        alpha = -1 * (K * tau) / (h * h)
-        beta = ((h * h) + 2 * (K * tau)) / (h * h)
+        if (not self.kIsDiff):
+            K = self.k(0, 0)
+            alpha = -1 * (K * tau) / (h * h)
+            beta = ((h * h) + 2 * (K * tau)) / (h * h)
+        else:
+            for i in range(1, N):
+                for j in range(1, M):
+                    kright = (self.kValues[j][i] + self.kValues[j][i + 1]) / 2
+                    kleft = (self.kValues[j][i] + self.kValues[j][i - 1]) / 2
+                    alpha[j][i] = 0
         result = np.zeros((N, N))
         for i in range(N - 1):
                 result[i][i] = beta
@@ -149,7 +186,7 @@ class linearEquation:
         ans = np.zeros((M + 1, N + 1))
         rightArr = np.zeros(N)
         coeffMatrix = self.calcMatrix()
-        print(coeffMatrix)
+        #print(coeffMatrix)
         for i in range(N):
             ans[0][i] = self.u(gridX[i], 0)
             rightArr[i] = ans[0][i]

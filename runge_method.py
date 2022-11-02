@@ -13,7 +13,12 @@ def quadDiff(u, v):
 
 def rungeMethod(linEq, gridX, gridT, gridF, eps, n):
     u = linEq.linSolution2(gridX, gridT, gridF)
-    linEq2 = LinearTEQ.linearEquation(linEq.x0, linEq.xn, linEq.h, (linEq.tau) / 2)
+    linEq2 = LinearTEQ.linearEquation(linEq.x0, linEq.xn, linEq.h, (linEq.tau) / 2, linEq.kIsDiff,
+        linEq.v0formula,
+        linEq.vnformula,
+        linEq.u0formula,
+        linEq.kformula,
+        linEq.fformula)
     (gridX2, gridT2, gridF2) = linEq2.initGrid()
     u2 = linEq2.linSolution2(gridX2, gridT2, gridF2)
     if (quadDiff(u[1], u2[1]) < eps * eps):
