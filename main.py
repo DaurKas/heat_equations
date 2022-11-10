@@ -1,5 +1,7 @@
 from cmath import sin
+from doctest import FAIL_FAST
 from turtle import right
+from unicodedata import ucd_3_2_0
 from unittest import result
 from PyQt5.QtWidgets import QMainWindow, QWidget, QApplication, QLabel, QLineEdit, QRadioButton, QVBoxLayout, QFrame, QPushButton, QSlider, QCheckBox, QComboBox
 
@@ -13,6 +15,7 @@ from scipy.integrate import odeint
 
 import LinearTEQ as lineq
 import runge_method
+import NonLinearTEQ as nolineq
 
 
 
@@ -20,40 +23,61 @@ import runge_method
 
 class Window(QMainWindow):
     def count(self, ax1, t, x0, xn, h, tau, qsl, isRungeRule):
-    
-        linHeatEq = lineq.linearEquation(x0, xn, h, tau, self.kIsDiff,
-                                        self.u0LineEdit.text(),
-                                        self.unLineEdit.text(),
-                                        self.v0LineEdit.text(),
-                                        self.kLineEdit.text(),
-                                        self.fLineEdit.text() )
-        (gridX, gridT, gridF) = linHeatEq.initGrid()
-
         
-        u2 = linHeatEq.fourPointDiffScheme(gridX, gridT, gridF)
-        qsl.setMaximum(int(1 / tau))
-        if (isRungeRule):
-            new_linHeatEq = lineq.linearEquation(x0, xn, h, 0.1, self.kIsDiff,
-                                        self.u0LineEdit.text(),
-                                        self.unLineEdit.text(),
-                                        self.v0LineEdit.text(),
-                                        self.kLineEdit.text(),
-                                        self.fLineEdit.text() )
-            (new_gridX, new_gridT, new_gridF) = new_linHeatEq.initGrid()
-            (u, self.numOfIter, self.resultRungeTau) = runge_method.rungeMethod(new_linHeatEq, new_gridX, new_gridT, new_gridF, self.eps, 1)
-            self.precisionControlSteps.setText(f"Количество шагов: {self.numOfIter}")
-            self.precisionControlResultTau.setText(f"Итоговое tau: {self.resultRungeTau}")
+        if (self.type == "Линейная задача"):
+            linHeatEq = lineq.linearEquation(x0, xn, h, tau, self.kIsDiff,
+                                            self.u0LineEdit.text(),
+                                            self.unLineEdit.text(),
+                                            self.v0LineEdit.text(),
+                                            self.kLineEdit.text(),
+                                            self.fLineEdit.text() )
+            (gridX, gridT, gridF) = linHeatEq.initGrid()
+
+            
+            u2 = linHeatEq.fourPointDiffScheme(gridX, gridT, gridF)
+            qsl.setMaximum(int(1 / tau))
+            if (isRungeRule):
+                new_linHeatEq = lineq.linearEquation(x0, xn, h, 0.1, self.kIsDiff,
+                                            self.u0LineEdit.text(),
+                                            self.unLineEdit.text(),
+                                            self.v0LineEdit.text(),
+                                            self.kLineEdit.text(),
+                                            self.fLineEdit.text() )
+                (new_gridX, new_gridT, new_gridF) = new_linHeatEq.initGrid()
+                (u, self.numOfIter, self.resultRungeTau) = runge_method.rungeMethod(new_linHeatEq, new_gridX, new_gridT, new_gridF, self.eps, 1)
+                self.precisionControlSteps.setText(f"Количество шагов: {self.numOfIter}")
+                self.precisionControlResultTau.setText(f"Итоговое tau: {self.resultRungeTau}")
+                self.gridX = gridX
+                self.u = u
+                self.explicitCheck.setChecked(False)
+                qsl.setMaximum(int(1 / self.resultRungeTau))
+                print("HELLO THERE")
+            else:
+                u = linHeatEq.linSolution2(gridX, gridT, gridF)
+                self.plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
+            self.plt1 = ax1.plot(gridX, u[t], 'r', label='u(x, t)')
+        elif (self.type == "Нелинейная задача"):
+            print("HE HE")
+            nonLinHeatEq = nolineq.NonlinearEquation(x0, xn, h, tau, self.kIsDiff,
+                                            self.u0LineEdit.text(),
+                                            self.unLineEdit.text(),
+                                            self.v0LineEdit.text(),
+                                            self.nonLinKLineEdit.text(),
+                                            self.fLineEdit.text() )
+            
+            print("HI HI1")
+
+            (gridX, gridT, gridF) = nonLinHeatEq.initGrid()
+            print("HI HI")
             self.gridX = gridX
-            self.u = u
-            self.explicitCheck.setChecked(False)
-            qsl.setMaximum(int(1 / self.resultRungeTau))
-            print("HELLO THERE")
-        else:
-            u = linHeatEq.linSolution2(gridX, gridT, gridF)
-            self.plt2 = ax1.plot(gridX, u2[t], 'g', label='u(x, t)')
+            self.u3 = nonLinHeatEq.implicitSolution(gridX, gridT, gridF)
+            qsl.setMaximum(int(1 / tau))
+            self.plt3 = ax1.plot(gridX, self.u3[t], 'r', label='u(x, t)')
+            u = self.u3
+            u2 = self.u3
 
 
-        self.plt1 = ax1.plot(gridX, u[t], 'r', label='u(x, t)')
+   
         ax1.legend()
         ax1.grid()
         ax1.minorticks_on()
@@ -69,10 +93,14 @@ class Window(QMainWindow):
     def drawPlt(self, ax1, t, gridX, x0, xn, isExpl, isImpl):
 
         ax1.clear()
-        if (isImpl):
-            self.plt1 = ax1.plot(gridX, self.u[t], 'r', label='u(x)')
-        if (isExpl):
-            self.plt2 = ax1.plot(gridX, self.u2[t], 'g', label='u(x, t)')
+        if (self.type == "Линейная задача"):
+            if (isImpl):
+                self.plt1 = ax1.plot(gridX, self.u[t], 'r', label='u(x)')
+            if (isExpl):
+                self.plt2 = ax1.plot(gridX, self.u2[t], 'g', label='u(x, t)')
+        elif (self.type == "Нелинейная задача"):
+            self.plt3 = ax1.plot(gridX, self.u3[t], 'r', label='u(x)')
+
         ax1.grid()
         ax1.minorticks_on()
         ax1.legend()
@@ -163,6 +191,9 @@ class Window(QMainWindow):
         self.equationTypeSelect.setGeometry(820, 100, 140, 20)
         self.equationTypeSelect.addItem("Линейная задача")
         self.equationTypeSelect.addItem("Нелинейная задача")
+        self.type = self.equationTypeSelect.currentText()
+        self.equationTypeSelect.currentIndexChanged[int].connect(self.changeTaskType)
+
 
         self.explicitLabel = QLabel("Явная схема", self)
         self.explicitLabel.setGeometry(820, 200, 100, 20)
@@ -212,6 +243,12 @@ class Window(QMainWindow):
         self.kIsDiff = False
         self.kTypeCheck.stateChanged.connect(self.changeKType)
 
+        self.nonLinKLabel = QLabel("K(u) = ", self)
+        self.nonLinKLineEdit = QLineEdit(self)
+        self.nonLinKLabel.setGeometry(820, 380, 60, 20)
+        self.nonLinKLineEdit.setGeometry(890, 380, 100, 20)
+        self.nonLinKLabel.setHidden(True)
+        self.nonLinKLineEdit.setHidden(True)
 
         self.u0Label = QLabel("U(x0, t) = ", self)
         self.u0LineEdit = QLineEdit(self)
@@ -292,10 +329,68 @@ class Window(QMainWindow):
             self.isShowImplicit = 1
         self.drawPlt(self.ax1, self.t, self.gridX, self.x0, self.xn, self.isShowExplicit, self.isShowImplicit)
         self.canvas.draw()
+
     def useRungeRule(self, int):
         self.isRungeRule = not(self.isRungeRule)
+
     def changeKType(self, int):
         self.kIsDiff = not(self.kIsDiff)
+
+    def changeTaskType(self, int):
+        self.type = self.equationTypeSelect.currentText()
+        if (self.type == "Нелинейная задача"):
+            self.nonLinKLabel.setHidden(False)
+            self.nonLinKLineEdit.setHidden(False)
+            self.explicitLabel.setHidden(True)
+            self.explicitCheck.setHidden(True)
+            self.implicitLabel.setHidden(True)
+            self.implicitCheck.setHidden(True)
+            self.precisionControlLabel.setHidden(True)
+            self.precisionControlCheck.setHidden(True)
+            self.epsLabel.setHidden(True)
+            self.epsLineEdit.setHidden(True)
+            self.precisionControlSteps.setHidden(True)
+            self.precisionControlResultTau.setHidden(True)
+            self.klabel.setHidden(True)
+            self.kLineEdit.setHidden(True)
+            self.kTypeLabel.setHidden(True)
+            self.kTypeCheck.setHidden(True)
+            #self.u0Label.setHidden(True)
+            #self.u0LineEdit.setHidden(True)
+            #self.unLabel.setHidden(True)
+            #self.unLineEdit.setHidden(True)
+            #self.v0Label.setHidden(True)
+            #self.v0LineEdit.setHidden(True)
+            #self.fLabel.setHidden(True)
+            #self.fLineEdit.setHidden(True)
+            #self.fLineEdit.setHidden(True)
+        elif (self.type == "Линейная задача"):
+            self.nonLinKLabel.setHidden(True)
+            self.nonLinKLineEdit.setHidden(True)
+            self.explicitLabel.setHidden(False)
+            self.explicitCheck.setHidden(False)
+            self.implicitLabel.setHidden(False)
+            self.implicitCheck.setHidden(False)
+            self.precisionControlLabel.setHidden(False)
+            self.precisionControlCheck.setHidden(False)
+            self.epsLabel.setHidden(False)
+            self.epsLineEdit.setHidden(False)
+            self.precisionControlSteps.setHidden(False)
+            self.precisionControlResultTau.setHidden(False)
+            self.klabel.setHidden(False)
+            self.kLineEdit.setHidden(False)
+            self.kTypeLabel.setHidden(False)
+            self.kTypeCheck.setHidden(False)
+            #self.u0Label.setHidden(False)
+            #self.u0LineEdit.setHidden(False)
+            #self.unLabel.setHidden(False)
+            #self.unLineEdit.setHidden(False)
+            #self.v0Label.setHidden(False)
+            #self.v0LineEdit.setHidden(False)
+            #self.fLabel.setHidden(False)
+            #self.fLineEdit.setHidden(False)
+            #self.fLineEdit.setHidden(False)
+
 
 
 

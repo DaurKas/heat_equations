@@ -146,29 +146,38 @@ class linearEquation:
 
         return result
 
-    def calcMatrix(self):
+    def calcMatrix(self, t):
         N = self.n
         M = self.m
         tau = self.tau
         h = self.h
         X0 = self.x0
         XN = self.xn
+        alpha = np.zeros(N)
+        beta = np.zeros(N)
         if (not self.kIsDiff):
             K = self.k(0, 0)
-            alpha = -1 * (K * tau) / (h * h)
-            beta = ((h * h) + 2 * (K * tau)) / (h * h)
+            alpha[0] = -1 * (K * tau) / (h * h)
+            beta[0] = ((h * h) + 2 * (K * tau)) / (h * h)
         else:
             for i in range(1, N):
-                for j in range(1, M):
-                    kright = (self.kValues[j][i] + self.kValues[j][i + 1]) / 2
-                    kleft = (self.kValues[j][i] + self.kValues[j][i - 1]) / 2
-                    alpha[j][i] = 0
+                kright = (self.kValues[t][i] + self.kValues[t][i + 1]) / 2
+                kleft = (self.kValues[t][i] + self.kValues[t][i - 1]) / 2
+                alpha[i] = -1 * tau * kleft / (h * h)
+                beta[i] = (tau * (kleft + kright) + h * h) / (h * h)
         result = np.zeros((N, N))
         for i in range(N - 1):
-                result[i][i] = beta
-                result[i + 1][i] = alpha
-                result[i][i + 1] = alpha
-        result[N - 1][N - 1] = beta
+            if (self.kIsDiff):
+                result[i][i] = beta[i + 1]
+                result[i + 1][i] = alpha[i + 1]
+                result[i][i + 1] = alpha[i + 1]
+                result[N - 1][N - 1] = beta[N - 1]
+
+            else:
+                result[i][i] = beta[0]
+                result[i + 1][i] = alpha[0]
+                result[i][i + 1] = alpha[0]
+                result[N - 1][N - 1] = beta[0]
         return result
 
     def calcRightVector(self, y, gridF, j):
@@ -185,7 +194,7 @@ class linearEquation:
         tau = self.tau
         ans = np.zeros((M + 1, N + 1))
         rightArr = np.zeros(N)
-        coeffMatrix = self.calcMatrix()
+        coeffMatrix = self.calcMatrix(0)
         #print(coeffMatrix)
         for i in range(N):
             ans[0][i] = self.u(gridX[i], 0)
@@ -194,7 +203,8 @@ class linearEquation:
         for j in range(1, M):
             #for i in range(N):
                 #rightArr[i] = rightArr[i] - tau * gridF[j][i] * 1
-
+            if (self.kIsDiff):
+                coeffMatrix = self.calcMatrix(j)
             newLayer = self.sweepMethod(coeffMatrix, rightArr, N)
 
             for i in range(len(newLayer)):
